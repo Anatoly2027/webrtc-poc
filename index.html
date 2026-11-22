@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>DSH WebRTC вЂ” РїСЂРѕРІРµСЂРєР° РєР°РЅР°Р»Р°</title>
+<title>DSH WebRTC — проверка канала</title>
 <style>
   :root { color-scheme: light dark; }
   body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 16px; line-height: 1.45; }
@@ -23,44 +23,44 @@
 </style>
 </head>
 <body>
-<h1>РџСЂРѕРІРµСЂРєР° РєР°РЅР°Р»Р° WebRTC</h1>
-<div class="sub">РџСЂРѕС‚РѕС‚РёРї РґР»СЏ DSH. РЁРёС„СЂРѕРІР°РЅРёРµ DTLS СЃРєРІРѕР·РЅРѕРµ; STUN Рё TURN РІРёРґСЏС‚ С‚РѕР»СЊРєРѕ Р°РґСЂРµСЃР° Рё РѕР±СЉС‘Рј, СЃРѕРґРµСЂР¶РёРјРѕРµ вЂ” РЅРµС‚.</div>
+<h1>Проверка канала WebRTC</h1>
+<div class="sub">Прототип для DSH. Шифрование DTLS сквозное; STUN и TURN видят только адреса и объём, содержимое — нет.</div>
 
 <div class="card">
-  <h2>1. Р РѕР»СЊ Рё СЂРµР¶РёРј</h2>
+  <h2>1. Роль и режим</h2>
   <div class="row">
-    <button id="btnPc" class="primary">РЇ РєРѕРјРїСЊСЋС‚РµСЂ вЂ” СЃРѕР·РґР°С‚СЊ РїСЂРµРґР»РѕР¶РµРЅРёРµ</button>
-    <button id="btnPhone">РЇ С‚РµР»РµС„РѕРЅ вЂ” РїСЂРёРЅСЏС‚СЊ РїСЂРµРґР»РѕР¶РµРЅРёРµ</button>
+    <button id="btnPc" class="primary">Я компьютер — создать предложение</button>
+    <button id="btnPhone">Я телефон — принять предложение</button>
   </div>
   <div class="row">
-    <label class="chk"><input type="checkbox" id="forceRelay"> РўРѕР»СЊРєРѕ С‡РµСЂРµР· TURN (РїСЂРѕРІРµСЂРєР° СЂРµР»РµСЏ)</label>
+    <label class="chk"><input type="checkbox" id="forceRelay"> Только через TURN (проверка релея)</label>
   </div>
-  <div class="hint">РќР° РєРѕРјРїСЊСЋС‚РµСЂРµ вЂ” РїРµСЂРІР°СЏ РєРЅРѕРїРєР°, РЅР° С‚РµР»РµС„РѕРЅРµ вЂ” РІС‚РѕСЂР°СЏ. Р“Р°Р»РѕС‡РєР° РґРѕР»Р¶РЅР° СЃРѕРІРїР°РґР°С‚СЊ РЅР° РѕР±РµРёС… СЃС‚РѕСЂРѕРЅР°С….</div>
+  <div class="hint">На компьютере — первая кнопка, на телефоне — вторая. Галочка должна совпадать на обеих сторонах.</div>
 </div>
 
 <div class="card" id="pcCard" style="display:none">
-  <h2>2. РљРѕРґ РґР»СЏ С‚РµР»РµС„РѕРЅР°</h2>
-  <textarea id="pcOut" readonly placeholder="Р·РґРµСЃСЊ РїРѕСЏРІРёС‚СЃСЏ РєРѕРґ"></textarea>
+  <h2>2. Код для телефона</h2>
+  <textarea id="pcOut" readonly placeholder="здесь появится код"></textarea>
   <div class="row">
-    <button id="pcCopy">РЎРєРѕРїРёСЂРѕРІР°С‚СЊ</button>
+    <button id="pcCopy">Скопировать</button>
   </div>
-  <h2 style="margin-top:12px">3. Р’СЃС‚Р°РІСЊС‚Рµ РѕС‚РІРµС‚ СЃ С‚РµР»РµС„РѕРЅР°</h2>
-  <textarea id="pcIn" placeholder="РІСЃС‚Р°РІСЊС‚Рµ СЃСЋРґР° РєРѕРґ РѕС‚РІРµС‚Р°"></textarea>
-  <div class="row"><button id="pcApply" class="primary">РџСЂРёРјРµРЅРёС‚СЊ РѕС‚РІРµС‚</button></div>
+  <h2 style="margin-top:12px">3. Вставьте ответ с телефона</h2>
+  <textarea id="pcIn" placeholder="вставьте сюда код ответа"></textarea>
+  <div class="row"><button id="pcApply" class="primary">Применить ответ</button></div>
 </div>
 
 <div class="card" id="phoneCard" style="display:none">
-  <h2>2. Р’СЃС‚Р°РІСЊС‚Рµ РєРѕРґ СЃ РєРѕРјРїСЊСЋС‚РµСЂР°</h2>
-  <textarea id="phoneIn" placeholder="РІСЃС‚Р°РІСЊС‚Рµ СЃСЋРґР° РєРѕРґ РїСЂРµРґР»РѕР¶РµРЅРёСЏ"></textarea>
-  <div class="row"><button id="phoneAccept" class="primary">РџСЂРёРЅСЏС‚СЊ Рё СЃРѕР·РґР°С‚СЊ РѕС‚РІРµС‚</button></div>
-  <h2 style="margin-top:12px">3. РљРѕРґ РѕС‚РІРµС‚Р° РґР»СЏ РєРѕРјРїСЊСЋС‚РµСЂР°</h2>
-  <textarea id="phoneOut" readonly placeholder="Р·РґРµСЃСЊ РїРѕСЏРІРёС‚СЃСЏ РѕС‚РІРµС‚"></textarea>
-  <div class="row"><button id="phoneCopy">РЎРєРѕРїРёСЂРѕРІР°С‚СЊ</button></div>
+  <h2>2. Вставьте код с компьютера</h2>
+  <textarea id="phoneIn" placeholder="вставьте сюда код предложения"></textarea>
+  <div class="row"><button id="phoneAccept" class="primary">Принять и создать ответ</button></div>
+  <h2 style="margin-top:12px">3. Код ответа для компьютера</h2>
+  <textarea id="phoneOut" readonly placeholder="здесь появится ответ"></textarea>
+  <div class="row"><button id="phoneCopy">Скопировать</button></div>
 </div>
 
 <div class="card">
-  <h2>РЎРѕСЃС‚РѕСЏРЅРёРµ</h2>
-  <div id="status" class="status">РѕР¶РёРґР°РЅРёРµ</div>
+  <h2>Состояние</h2>
+  <div id="status" class="status">ожидание</div>
 </div>
 
 <script>
@@ -73,9 +73,9 @@
   };
   const set = (m) => { st.textContent = m; };
 
-  // STUN вЂ” Р·РЅР°РєРѕРјСЃС‚РІРѕ; TURN вЂ” СЂРµР»РµР№ РґР»СЏ СЃРµС‚РµР№, Р±Р»РѕРєРёСЂСѓСЋС‰РёС… UDP.
-  // РџСѓР±Р»РёС‡РЅС‹Рµ TURN-СЃРµСЂРІРµСЂС‹ Open Relay (metered.ca): РїРµСЂРµСЃС‹Р»Р°СЋС‚ С‚РѕР»СЊРєРѕ
-  // Р·Р°С€РёС„СЂРѕРІР°РЅРЅС‹Рµ РїР°РєРµС‚С‹, СЃРѕРґРµСЂР¶РёРјРѕРµ РёРј РЅРµРґРѕСЃС‚СѓРїРЅРѕ.
+  // STUN — знакомство; TURN — релей для сетей, блокирующих UDP.
+  // Публичные TURN-серверы Open Relay (metered.ca): пересылают только
+  // зашифрованные пакеты, содержимое им недоступно.
   const TURN_USER = 'openrelayproject';
   const TURN_PASS = 'openrelayproject';
   const ICE = [
@@ -97,20 +97,20 @@
       iceServers: ICE,
       iceTransportPolicy: relayOnly() ? 'relay' : 'all'
     });
-    log('СЂРµР¶РёРј: ' + (relayOnly() ? 'С‚РѕР»СЊРєРѕ TURN' : 'РѕР±С‹С‡РЅС‹Р№ (РІСЃРµ РєР°РЅРґРёРґР°С‚С‹)'));
+    log('режим: ' + (relayOnly() ? 'только TURN' : 'обычный (все кандидаты)'));
     p.onicecandidate = (e) => {
       const c = e.candidate;
-      if (!c) { log('СЃР±РѕСЂ РєР°РЅРґРёРґР°С‚РѕРІ Р·Р°РІРµСЂС€С‘РЅ'); return; }
+      if (!c) { log('сбор кандидатов завершён'); return; }
       const type = (c.candidate.match(/ typ (\w+)/) || [])[1] || '?';
       const proto = (c.candidate.match(/ udp | tcp /) || [])[0] || '';
       if (!candTypes.has(type + proto)) {
         candTypes.add(type + proto);
-        log(`РєР°РЅРґРёРґР°С‚: ${type}${proto ? ' (' + proto.trim() + ')' : ''}`, type === 'relay' ? 'ok' : '');
+        log(`кандидат: ${type}${proto ? ' (' + proto.trim() + ')' : ''}`, type === 'relay' ? 'ok' : '');
       }
     };
     p.oniceconnectionstatechange = () => log('ice: ' + p.iceConnectionState);
     p.onconnectionstatechange = () => {
-      log('СЃРѕРµРґРёРЅРµРЅРёРµ: ' + p.connectionState, p.connectionState === 'connected' ? 'ok' : '');
+      log('соединение: ' + p.connectionState, p.connectionState === 'connected' ? 'ok' : '');
       if (p.connectionState === 'connected') showStats(p);
     };
     return p;
@@ -131,7 +131,7 @@
   function wireChannel(channel) {
     dc = channel;
     dc.onopen = () => {
-      log('РєР°РЅР°Р» РґР°РЅРЅС‹С… РћРўРљР Р«Рў', 'ok');
+      log('канал данных ОТКРЫТ', 'ok');
       dc.send(JSON.stringify({ type: 'ping', t: Date.now() }));
       clearInterval(pingTimer);
       pingTimer = setInterval(() => { dc.send(JSON.stringify({ type: 'ping', t: Date.now() })); }, 1000);
@@ -140,10 +140,10 @@
       try {
         const m = JSON.parse(e.data);
         if (m.type === 'ping') { dc.send(JSON.stringify({ type: 'pong', t: m.t })); return; }
-        if (m.type === 'pong') { log(`РїРёРЅРі ${Date.now() - m.t} РјСЃ`, 'ok'); return; }
-      } catch { log('СЃРѕРѕР±С‰РµРЅРёРµ: ' + String(e.data).slice(0, 60)); }
+        if (m.type === 'pong') { log(`пинг ${Date.now() - m.t} мс`, 'ok'); return; }
+      } catch { log('сообщение: ' + String(e.data).slice(0, 60)); }
     };
-    dc.onclose = () => { log('РєР°РЅР°Р» Р·Р°РєСЂС‹С‚', 'bad'); clearInterval(pingTimer); };
+    dc.onclose = () => { log('канал закрыт', 'bad'); clearInterval(pingTimer); };
   }
 
   async function showStats(p) {
@@ -158,19 +158,19 @@
         });
         const l = local ? local.candidateType : '?';
         const r = remote ? remote.candidateType : '?';
-        log(`РїСѓС‚СЊ: Р»РѕРєР°Р»СЊРЅС‹Р№ ${l} в†’ СѓРґР°Р»С‘РЅРЅС‹Р№ ${r}`, (l === 'relay' || r === 'relay') ? 'warn' : 'ok');
-        if (l !== 'relay' && r !== 'relay') log('РџР РЇРњРћР• СЃРѕРµРґРёРЅРµРЅРёРµ вЂ” СЂРµР»РµР№ РЅРµ РЅСѓР¶РµРЅ', 'ok');
-        else log('СЃРѕРµРґРёРЅРµРЅРёРµ С‡РµСЂРµР· TURN-СЂРµР»РµР№ (С€РёС„СЂРѕРІР°РЅРёРµ СЃРєРІРѕР·РЅРѕРµ, СЂРµР»РµР№ РІРёРґРёС‚ С‚РѕР»СЊРєРѕ Р°РґСЂРµСЃР°)', 'warn');
+        log(`путь: локальный ${l} → удалённый ${r}`, (l === 'relay' || r === 'relay') ? 'warn' : 'ok');
+        if (l !== 'relay' && r !== 'relay') log('ПРЯМОЕ соединение — релей не нужен', 'ok');
+        else log('соединение через TURN-релей (шифрование сквозное, релей видит только адреса)', 'warn');
       } else {
-        log('РїР°СЂР° РєР°РЅРґРёРґР°С‚РѕРІ РµС‰С‘ РЅРµ РІС‹Р±СЂР°РЅР°', 'warn');
+        log('пара кандидатов ещё не выбрана', 'warn');
       }
-    } catch (e) { log('СЃС‚Р°С‚РёСЃС‚РёРєР° РЅРµРґРѕСЃС‚СѓРїРЅР°: ' + e.message, 'warn'); }
+    } catch (e) { log('статистика недоступна: ' + e.message, 'warn'); }
   }
 
   document.getElementById('btnPc').onclick = async () => {
     document.getElementById('pcCard').style.display = '';
     document.getElementById('phoneCard').style.display = 'none';
-    set('СЃРѕР·РґР°СЋ РїСЂРµРґР»РѕР¶РµРЅРёРµвЂ¦');
+    set('создаю предложение…');
     candTypes.clear();
     pc = newPc();
     wireChannel(pc.createDataChannel('poc', { ordered: true }));
@@ -178,31 +178,31 @@
     await pc.setLocalDescription(offer);
     await waitIce(pc);
     document.getElementById('pcOut').value = enc(pc.localDescription.sdp);
-    log('РїСЂРµРґР»РѕР¶РµРЅРёРµ РіРѕС‚РѕРІРѕ, СЃРєРѕРїРёСЂСѓР№С‚Рµ РєРѕРґ РґР»СЏ С‚РµР»РµС„РѕРЅР°', 'ok');
+    log('предложение готово, скопируйте код для телефона', 'ok');
   };
 
   document.getElementById('pcApply').onclick = async () => {
     const raw = document.getElementById('pcIn').value;
-    if (!raw.trim()) return log('РІСЃС‚Р°РІСЊС‚Рµ РєРѕРґ РѕС‚РІРµС‚Р°', 'bad');
+    if (!raw.trim()) return log('вставьте код ответа', 'bad');
     await pc.setRemoteDescription({ type: 'answer', sdp: dec(raw) });
-    log('РѕС‚РІРµС‚ РїСЂРёРјРµРЅС‘РЅ, Р¶РґС‘Рј СЃРѕРµРґРёРЅРµРЅРёСЏвЂ¦');
+    log('ответ применён, ждём соединения…');
   };
 
   document.getElementById('pcCopy').onclick = async () => {
     const el = document.getElementById('pcOut');
-    try { await navigator.clipboard.writeText(el.value); log('СЃРєРѕРїРёСЂРѕРІР°РЅРѕ', 'ok'); }
-    catch { el.select(); document.execCommand('copy'); log('СЃРєРѕРїРёСЂРѕРІР°РЅРѕ (СЃС‚Р°СЂС‹Р№ СЃРїРѕСЃРѕР±)', 'ok'); }
+    try { await navigator.clipboard.writeText(el.value); log('скопировано', 'ok'); }
+    catch { el.select(); document.execCommand('copy'); log('скопировано (старый способ)', 'ok'); }
   };
 
   document.getElementById('btnPhone').onclick = () => {
     document.getElementById('phoneCard').style.display = '';
     document.getElementById('pcCard').style.display = 'none';
-    set('РІСЃС‚Р°РІСЊС‚Рµ РєРѕРґ СЃ РєРѕРјРїСЊСЋС‚РµСЂР°');
+    set('вставьте код с компьютера');
   };
 
   document.getElementById('phoneAccept').onclick = async () => {
     const raw = document.getElementById('phoneIn').value;
-    if (!raw.trim()) return log('РІСЃС‚Р°РІСЊС‚Рµ РєРѕРґ РїСЂРµРґР»РѕР¶РµРЅРёСЏ', 'bad');
+    if (!raw.trim()) return log('вставьте код предложения', 'bad');
     candTypes.clear();
     pc = newPc();
     pc.ondatachannel = (e) => wireChannel(e.channel);
@@ -211,13 +211,13 @@
     await pc.setLocalDescription(answer);
     await waitIce(pc);
     document.getElementById('phoneOut').value = enc(pc.localDescription.sdp);
-    log('РѕС‚РІРµС‚ РіРѕС‚РѕРІ, РѕС‚РїСЂР°РІСЊС‚Рµ РєРѕРґ РЅР° РєРѕРјРїСЊСЋС‚РµСЂ', 'ok');
+    log('ответ готов, отправьте код на компьютер', 'ok');
   };
 
   document.getElementById('phoneCopy').onclick = async () => {
     const el = document.getElementById('phoneOut');
-    try { await navigator.clipboard.writeText(el.value); log('СЃРєРѕРїРёСЂРѕРІР°РЅРѕ', 'ok'); }
-    catch { el.select(); document.execCommand('copy'); log('СЃРєРѕРїРёСЂРѕРІР°РЅРѕ (СЃС‚Р°СЂС‹Р№ СЃРїРѕСЃРѕР±)', 'ok'); }
+    try { await navigator.clipboard.writeText(el.value); log('скопировано', 'ok'); }
+    catch { el.select(); document.execCommand('copy'); log('скопировано (старый способ)', 'ok'); }
   };
 })();
 </script>
