@@ -189,13 +189,36 @@
     }, 5000);
   }
 
+  // Ждём именно ОКОНЧАНИЯ сбора: завершаемся только когда состояние complete
+  // и уже есть хотя бы один кандидат. Иначе в SDP уходил пустой список адресов
+  // (именно эта ошибка ломала все предыдущие попытки).
   async function waitIce(p) {
-    if (p.iceGatheringState === 'complete') return;
+    const started = Date.now();
+    const maxMs = relayOnly() ? 20000 : 15000;
     await new Promise((resolve) => {
-      const done = () => { p.removeEventListener('icegatheringstatechange', done); resolve(); };
-      p.addEventListener('icegatheringstatechange', done);
-      setTimeout(done, relayOnly() ? 8000 : 6000);
+      let settled = false;
+      const finish = () => {
+        if (settled) return;
+        settled = true;
+        clearInterval(timer);
+        clearTimeout(cap);
+        p.removeEventListener('icegatheringstatechange', onChange);
+        resolve();
+      };
+      const ready = () => {
+        const gathered = countCandidates(p.localDescription ? p.localDescription.sdp : '');
+        if (p.iceGatheringState === 'complete' && (gathered > 0 || Date.now() - started > 5000)) return true;
+        if (Date.now() - started > maxMs) return true;
+        return false;
+      };
+      const onChange = () => { if (ready()) finish(); };
+      const timer = setInterval(() => { if (ready()) finish(); }, 250);
+      const cap = setTimeout(finish, maxMs + 1000);
+      p.addEventListener('icegatheringstatechange', onChange);
+      if (ready()) finish();
     });
+    const n = p.localDescription ? countCandidates(p.localDescription.sdp) : 0;
+    log(`сбор завершён: ${n} кандидатов в SDP`, n > 0 ? 'ok' : 'bad');
   }
 
   function wireChannel(channel) {
