@@ -13,50 +13,57 @@
   button { padding: 10px 14px; font-size: 15px; border-radius: 8px; border: 1px solid #8884; background: #8881; cursor: pointer; }
   button:disabled { opacity: .45; cursor: default; }
   button.primary { background: #2563eb; color: #fff; border-color: #2563eb; }
-  textarea { width: 100%; height: 100px; font-family: ui-monospace, Consolas, monospace; font-size: 12px; padding: 8px; border-radius: 8px; border: 1px solid #8884; box-sizing: border-box; }
+  input.code { font-family: ui-monospace, Consolas, monospace; font-size: 22px; letter-spacing: 3px; padding: 10px 12px; width: 190px; text-transform: uppercase; border-radius: 8px; border: 1px solid #8884; background: #8881; }
   .card { border: 1px solid #8883; border-radius: 10px; padding: 12px; margin-bottom: 12px; }
   .card h2 { font-size: 14px; margin: 0 0 8px; opacity: .8; font-weight: 600; }
-  .status { font-family: ui-monospace, Consolas, monospace; font-size: 13px; white-space: pre-wrap; background: #8881; border-radius: 8px; padding: 10px; min-height: 110px; max-height: 320px; overflow: auto; }
+  .status { font-family: ui-monospace, Consolas, monospace; font-size: 13px; white-space: pre-wrap; background: #8881; border-radius: 8px; padding: 10px; min-height: 120px; max-height: 320px; overflow: auto; }
   .ok { color: #16a34a; } .bad { color: #dc2626; } .warn { color: #d97706; }
   .hint { font-size: 12px; opacity: .7; margin-top: 6px; }
+  .big { font-family: ui-monospace, Consolas, monospace; font-size: 34px; letter-spacing: 6px; font-weight: 700; }
   label.chk { display: flex; gap: 8px; align-items: center; font-size: 14px; }
+  details { margin-top: 8px; font-size: 13px; }
+  textarea { width: 100%; height: 80px; font-family: ui-monospace, Consolas, monospace; font-size: 11px; padding: 6px; border-radius: 8px; border: 1px solid #8884; box-sizing: border-box; }
 </style>
 </head>
 <body>
 <h1>Проверка канала WebRTC</h1>
-<div class="sub">Прототип для DSH. Шифрование DTLS сквозное; STUN и TURN видят только адреса и объём, содержимое — нет.</div>
+<div class="sub">Обмен кодами — через публичный сервис ntfy.sh, но содержимое шифруется ключом из кода комнаты: сервис видит только шифротекст.</div>
 
 <div class="card">
   <h2>1. Роль и режим</h2>
   <div class="row">
-    <button id="btnPc" class="primary">Я компьютер — создать предложение</button>
-    <button id="btnPhone">Я телефон — принять предложение</button>
+    <button id="btnPc" class="primary">Я компьютер — создать комнату</button>
+    <button id="btnPhone">Я телефон — подключиться</button>
   </div>
   <div class="row">
     <label class="chk"><input type="checkbox" id="forceRelay"> Только через TURN (проверка релея)</label>
   </div>
-  <div class="hint">На компьютере — первая кнопка, на телефоне — вторая. Галочка должна совпадать на обеих сторонах.</div>
+  <div class="hint">Галочка должна совпадать на обеих сторонах.</div>
 </div>
 
-<div class="card" id="pcCard" style="display:none">
-  <h2>2. Код для телефона</h2>
-  <textarea id="pcOut" readonly placeholder="здесь появится код"></textarea>
+<div class="card" id="roomCard" style="display:none">
+  <h2>2. Код комнаты</h2>
   <div class="row">
-    <button id="pcCopy">Скопировать</button>
+    <div id="roomCodeShow" class="big">—</div>
   </div>
-  <h2 style="margin-top:12px">3. Вставьте ответ с телефона</h2>
-  <textarea id="pcIn" placeholder="вставьте сюда код ответа"></textarea>
-  <div class="row"><button id="pcApply" class="primary">Применить ответ</button></div>
+  <div class="row" id="phoneJoinRow" style="display:none">
+    <input id="roomInput" class="code" placeholder="XXXXXXXX" maxlength="8" autocapitalize="characters" autocomplete="off">
+    <button id="btnJoin" class="primary">Подключиться</button>
+  </div>
+  <div class="hint" id="roomHint"></div>
 </div>
 
-<div class="card" id="phoneCard" style="display:none">
-  <h2>2. Вставьте код с компьютера</h2>
-  <textarea id="phoneIn" placeholder="вставьте сюда код предложения"></textarea>
-  <div class="row"><button id="phoneAccept" class="primary">Принять и создать ответ</button></div>
-  <h2 style="margin-top:12px">3. Код ответа для компьютера</h2>
-  <textarea id="phoneOut" readonly placeholder="здесь появится ответ"></textarea>
-  <div class="row"><button id="phoneCopy">Скопировать</button></div>
-</div>
+<details>
+  <summary>Ручной режим (если сервис недоступен)</summary>
+  <div style="margin-top:8px">
+    <div class="row"><button id="btnManualPc">Как компьютер: создать предложение</button><button id="btnManualPhone">Как телефон: принять предложение</button></div>
+    <div id="manualBox" style="display:none">
+      <textarea id="manualIn" placeholder="вставьте сюда код с другой стороны"></textarea>
+      <div class="row"><button id="manualApply">Применить</button><button id="manualCopy">Скопировать результат</button></div>
+      <textarea id="manualOut" readonly placeholder="здесь появится ваш код"></textarea>
+    </div>
+  </div>
+</details>
 
 <div class="card">
   <h2>Состояние</h2>
@@ -72,10 +79,8 @@
     st.scrollTop = st.scrollHeight;
   };
   const set = (m) => { st.textContent = m; };
+  const $ = (id) => document.getElementById(id);
 
-  // STUN — знакомство; TURN — релей для сетей, блокирующих UDP.
-  // Публичные TURN-серверы Open Relay (metered.ca): пересылают только
-  // зашифрованные пакеты, содержимое им недоступно.
   const TURN_USER = 'openrelayproject';
   const TURN_PASS = 'openrelayproject';
   const ICE = [
@@ -87,46 +92,90 @@
     { urls: 'turns:openrelay.metered.ca:443?transport=tcp', username: TURN_USER, credential: TURN_PASS }
   ];
 
-  let pc = null, dc = null, pingTimer = null;
+  let pc = null, dc = null, pingTimer = null, pollTimer = null;
   const candTypes = new Set();
+  const relayOnly = () => $('forceRelay').checked;
 
-  const relayOnly = () => document.getElementById('forceRelay').checked;
+  // --- шифрование сигнализации: ключ = SHA-256(код комнаты) ---
+  const enc = new TextEncoder(), dec = new TextDecoder();
+  async function keyFrom(code) {
+    const d = await crypto.subtle.digest('SHA-256', enc.encode('dsh-poc|' + code));
+    return crypto.subtle.importKey('raw', d, 'AES-GCM', false, ['encrypt', 'decrypt']);
+  }
+  async function digestHex(code) {
+    const d = await crypto.subtle.digest('SHA-256', enc.encode('topic|' + code));
+    return [...new Uint8Array(d)].map(b => b.toString(16).padStart(2, '0')).join('').slice(0, 20);
+  }
+  async function seal(code, obj) {
+    const key = await keyFrom(code);
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    const ct = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, enc.encode(JSON.stringify(obj))));
+    const out = new Uint8Array(iv.length + ct.length);
+    out.set(iv); out.set(ct, iv.length);
+    return btoa(String.fromCharCode(...out));
+  }
+  async function unseal(code, b64) {
+    const key = await keyFrom(code);
+    const raw = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+    const pt = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: raw.slice(0, 12) }, key, raw.slice(12));
+    return JSON.parse(dec.decode(pt));
+  }
+
+  // --- транспорт сигнализации через ntfy.sh ---
+  async function topicFor(code) { return 'dshpoc-' + await digestHex(code); }
+  async function publish(code, obj) {
+    const topic = await topicFor(code);
+    const body = await seal(code, obj);
+    const r = await fetch('https://ntfy.sh/' + topic, { method: 'POST', body });
+    if (!r.ok) throw new Error('publish ' + r.status);
+    log('код отправлен в комнату', 'ok');
+  }
+  async function readRoom(code) {
+    const topic = await topicFor(code);
+    const r = await fetch('https://ntfy.sh/' + topic + '/json?poll=1&since=all', { cache: 'no-store' });
+    if (!r.ok) return [];
+    const text = await r.text();
+    const out = [];
+    for (const line of text.split('\n')) {
+      if (!line.trim()) continue;
+      try {
+        const d = JSON.parse(line);
+        if (d.event === 'message' && d.message) out.push({ id: d.id, at: d.time, payload: await unseal(code, d.message) });
+      } catch { /* чужие или нерасшифровываемые сообщения игнорируем */ }
+    }
+    return out;
+  }
 
   function newPc() {
-    const p = new RTCPeerConnection({
-      iceServers: ICE,
-      iceTransportPolicy: relayOnly() ? 'relay' : 'all'
-    });
+    const p = new RTCPeerConnection({ iceServers: ICE, iceTransportPolicy: relayOnly() ? 'relay' : 'all' });
     log('режим: ' + (relayOnly() ? 'только TURN' : 'обычный (все кандидаты)'));
     p.onicecandidate = (e) => {
       const c = e.candidate;
       if (!c) { log('сбор кандидатов завершён'); return; }
       const type = (c.candidate.match(/ typ (\w+)/) || [])[1] || '?';
-      const proto = (c.candidate.match(/ udp | tcp /) || [])[0] || '';
-      if (!candTypes.has(type + proto)) {
-        candTypes.add(type + proto);
-        log(`кандидат: ${type}${proto ? ' (' + proto.trim() + ')' : ''}`, type === 'relay' ? 'ok' : '');
+      const proto = (c.candidate.match(/ (udp|tcp) /) || [])[1] || '';
+      const k = type + proto;
+      if (!candTypes.has(k)) {
+        candTypes.add(k);
+        log(`кандидат: ${type}${proto ? ' (' + proto + ')' : ''}`, type === 'relay' ? 'ok' : '');
       }
     };
-    p.oniceconnectionstatechange = () => log('ice: ' + p.iceConnectionState);
+    p.oniceconnectionstatechange = () => log('ice: ' + p.iceConnectionState, p.iceConnectionState === 'connected' || p.iceConnectionState === 'completed' ? 'ok' : '');
     p.onconnectionstatechange = () => {
-      log('соединение: ' + p.connectionState, p.connectionState === 'connected' ? 'ok' : '');
+      log('соединение: ' + p.connectionState, p.connectionState === 'connected' ? 'ok' : (p.connectionState === 'failed' ? 'bad' : ''));
       if (p.connectionState === 'connected') showStats(p);
     };
     return p;
   }
 
-  async function waitIce(p, ms) {
+  async function waitIce(p) {
     if (p.iceGatheringState === 'complete') return;
     await new Promise((resolve) => {
       const done = () => { p.removeEventListener('icegatheringstatechange', done); resolve(); };
       p.addEventListener('icegatheringstatechange', done);
-      setTimeout(done, ms || (relayOnly() ? 6000 : 4000));
+      setTimeout(done, relayOnly() ? 8000 : 6000);
     });
   }
-
-  const enc = (s) => btoa(unescape(encodeURIComponent(s)));
-  const dec = (s) => decodeURIComponent(escape(atob(s.trim())));
 
   function wireChannel(channel) {
     dc = channel;
@@ -151,73 +200,125 @@
       const stats = await p.getStats();
       let pair = null, local = null, remote = null;
       stats.forEach((s) => { if (s.type === 'candidate-pair' && s.state === 'succeeded') pair = s; });
-      if (pair) {
-        stats.forEach((s) => {
-          if (s.id === pair.localCandidateId) local = s;
-          if (s.id === pair.remoteCandidateId) remote = s;
-        });
-        const l = local ? local.candidateType : '?';
-        const r = remote ? remote.candidateType : '?';
-        log(`путь: локальный ${l} → удалённый ${r}`, (l === 'relay' || r === 'relay') ? 'warn' : 'ok');
-        if (l !== 'relay' && r !== 'relay') log('ПРЯМОЕ соединение — релей не нужен', 'ok');
-        else log('соединение через TURN-релей (шифрование сквозное, релей видит только адреса)', 'warn');
-      } else {
-        log('пара кандидатов ещё не выбрана', 'warn');
-      }
+      if (!pair) { log('пара кандидатов ещё не выбрана', 'warn'); return; }
+      stats.forEach((s) => {
+        if (s.id === pair.localCandidateId) local = s;
+        if (s.id === pair.remoteCandidateId) remote = s;
+      });
+      const l = local ? local.candidateType : '?';
+      const r = remote ? remote.candidateType : '?';
+      log(`путь: локальный ${l} → удалённый ${r}`, (l === 'relay' || r === 'relay') ? 'warn' : 'ok');
+      if (l !== 'relay' && r !== 'relay') log('ПРЯМОЕ соединение — релей не нужен', 'ok');
+      else log('соединение через TURN-релей (шифрование сквозное)', 'warn');
     } catch (e) { log('статистика недоступна: ' + e.message, 'warn'); }
   }
 
-  document.getElementById('btnPc').onclick = async () => {
-    document.getElementById('pcCard').style.display = '';
-    document.getElementById('phoneCard').style.display = 'none';
-    set('создаю предложение…');
+  // --- компьютер: комната ---
+  async function startPcRoom() {
+    const code = Array.from(crypto.getRandomValues(new Uint8Array(6)), b => 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'[b % 32]).join('').slice(0, 8);
+    $('roomCard').style.display = '';
+    $('roomCodeShow').textContent = code;
+    $('phoneJoinRow').style.display = 'none';
+    $('roomHint').textContent = 'Введите этот код на телефоне. Обмен произойдёт автоматически.';
+    document.body.dataset.code = code;
+    log('комната ' + code + ' создана');
     candTypes.clear();
     pc = newPc();
     wireChannel(pc.createDataChannel('poc', { ordered: true }));
     const offer = await pc.createOffer();
     await pc.setLocalDescription(offer);
     await waitIce(pc);
-    document.getElementById('pcOut').value = enc(pc.localDescription.sdp);
-    log('предложение готово, скопируйте код для телефона', 'ok');
-  };
+    const payload = { role: 'offer', sdp: pc.localDescription.sdp, relay: relayOnly() };
+    try { await publish(code, payload); } catch (e) { log('не удалось отправить код: ' + e.message, 'bad'); }
+    log('ждём ответ телефона…');
+    clearInterval(pollTimer);
+    pollTimer = setInterval(async () => {
+      if (!pc || pc.connectionState === 'connected') { clearInterval(pollTimer); return; }
+      try {
+        const msgs = await readRoom(code);
+        const ans = [...msgs].reverse().find(m => m.payload && m.payload.role === 'answer');
+        if (ans && pc.signalingState === 'have-local-offer') {
+          await pc.setRemoteDescription({ type: 'answer', sdp: ans.payload.sdp });
+          log('ответ получен автоматически, ждём соединения…', 'ok');
+          clearInterval(pollTimer);
+        }
+      } catch (e) { /* тихо, повторим */ }
+    }, 2000);
+  }
 
-  document.getElementById('pcApply').onclick = async () => {
-    const raw = document.getElementById('pcIn').value;
-    if (!raw.trim()) return log('вставьте код ответа', 'bad');
-    await pc.setRemoteDescription({ type: 'answer', sdp: dec(raw) });
-    log('ответ применён, ждём соединения…');
-  };
-
-  document.getElementById('pcCopy').onclick = async () => {
-    const el = document.getElementById('pcOut');
-    try { await navigator.clipboard.writeText(el.value); log('скопировано', 'ok'); }
-    catch { el.select(); document.execCommand('copy'); log('скопировано (старый способ)', 'ok'); }
-  };
-
-  document.getElementById('btnPhone').onclick = () => {
-    document.getElementById('phoneCard').style.display = '';
-    document.getElementById('pcCard').style.display = 'none';
-    set('вставьте код с компьютера');
-  };
-
-  document.getElementById('phoneAccept').onclick = async () => {
-    const raw = document.getElementById('phoneIn').value;
-    if (!raw.trim()) return log('вставьте код предложения', 'bad');
+  // --- телефон: вход в комнату ---
+  async function joinRoom() {
+    const code = ($('roomInput').value || '').trim().toUpperCase();
+    if (code.length < 6) { log('введите код комнаты', 'bad'); return; }
+    $('roomCard').style.display = '';
+    $('roomCodeShow').textContent = code;
+    log('ищу предложение в комнате ' + code + '…');
     candTypes.clear();
     pc = newPc();
     pc.ondatachannel = (e) => wireChannel(e.channel);
-    await pc.setRemoteDescription({ type: 'offer', sdp: dec(raw) });
+    let offer = null;
+    for (let i = 0; i < 20 && !offer; i++) {
+      try {
+        const msgs = await readRoom(code);
+        offer = [...msgs].reverse().find(m => m.payload && m.payload.role === 'offer');
+      } catch (e) { /* повторим */ }
+      if (!offer) await new Promise(r => setTimeout(r, 1500));
+    }
+    if (!offer) { log('предложение не найдено — проверьте код и нажмите «создать комнату» заново', 'bad'); return; }
+    await pc.setRemoteDescription({ type: 'offer', sdp: offer.payload.sdp });
     const answer = await pc.createAnswer();
     await pc.setLocalDescription(answer);
     await waitIce(pc);
-    document.getElementById('phoneOut').value = enc(pc.localDescription.sdp);
-    log('ответ готов, отправьте код на компьютер', 'ok');
-  };
+    try {
+      await publish(code, { role: 'answer', sdp: pc.localDescription.sdp });
+      log('ответ отправлен, ждём соединения…', 'ok');
+    } catch (e) { log('не удалось отправить ответ: ' + e.message, 'bad'); }
+  }
 
-  document.getElementById('phoneCopy').onclick = async () => {
-    const el = document.getElementById('phoneOut');
+  // --- ручной режим (резерв) ---
+  let manualRole = null;
+  async function manualStart(role) {
+    manualRole = role;
+    $('manualBox').style.display = '';
+    candTypes.clear();
+    pc = newPc();
+    if (role === 'pc') {
+      wireChannel(pc.createDataChannel('poc', { ordered: true }));
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+      await waitIce(pc);
+      $('manualOut').value = btoa(unescape(encodeURIComponent(pc.localDescription.sdp)));
+      $('manualOut').placeholder = 'отправьте этот код другой стороне';
+    } else {
+      pc.ondatachannel = (e) => wireChannel(e.channel);
+      const raw = $('manualIn').value.trim();
+      if (!raw) { log('вставьте код предложения', 'bad'); return; }
+      await pc.setRemoteDescription({ type: 'offer', sdp: decodeURIComponent(escape(atob(raw))) });
+      const answer = await pc.createAnswer();
+      await pc.setLocalDescription(answer);
+      await waitIce(pc);
+      $('manualOut').value = btoa(unescape(encodeURIComponent(pc.localDescription.sdp)));
+    }
+  }
+  async function manualApply() {
+    const raw = $('manualIn').value.trim();
+    if (!raw) { log('вставьте код', 'bad'); return; }
+    const sdp = decodeURIComponent(escape(atob(raw)));
+    if (manualRole === 'pc') await pc.setRemoteDescription({ type: 'answer', sdp });
+    else { await pc.setRemoteDescription({ type: 'offer', sdp }); const a = await pc.createAnswer(); await pc.setLocalDescription(a); await waitIce(pc); $('manualOut').value = btoa(unescape(encodeURIComponent(pc.localDescription.sdp))); }
+    log('код применён, ждём соединения…');
+  }
+
+  $('btnPc').onclick = () => { $('phoneJoinRow').style.display = 'none'; startPcRoom(); };
+  $('btnPhone').onclick = () => { $('roomCard').style.display = ''; $('phoneJoinRow').style.display = ''; $('roomCodeShow').textContent = '—'; };
+  $('btnJoin').onclick = () => joinRoom();
+  $('btnManualPc').onclick = () => manualStart('pc');
+  $('btnManualPhone').onclick = () => manualStart('phone');
+  $('manualApply').onclick = () => manualApply();
+  $('manualCopy').onclick = async () => {
+    const el = $('manualOut');
     try { await navigator.clipboard.writeText(el.value); log('скопировано', 'ok'); }
-    catch { el.select(); document.execCommand('copy'); log('скопировано (старый способ)', 'ok'); }
+    catch { el.select(); document.execCommand('copy'); }
   };
 })();
 </script>
