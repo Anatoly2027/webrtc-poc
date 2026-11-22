@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>DSH WebRTC — проверка канала</title>
+<title>DSH WebRTC — диагностика канала</title>
 <style>
   :root { color-scheme: light dark; }
   body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 16px; line-height: 1.45; }
@@ -13,21 +13,22 @@
   button { padding: 10px 14px; font-size: 15px; border-radius: 8px; border: 1px solid #8884; background: #8881; cursor: pointer; }
   button:disabled { opacity: .45; cursor: default; }
   button.primary { background: #2563eb; color: #fff; border-color: #2563eb; }
-  input.code { font-family: ui-monospace, Consolas, monospace; font-size: 22px; letter-spacing: 3px; padding: 10px 12px; width: 190px; text-transform: uppercase; border-radius: 8px; border: 1px solid #8884; background: #8881; }
+  input.code { font-family: ui-monospace, Consolas, monospace; font-size: 22px; letter-spacing: 3px; padding: 10px 12px; width: 200px; text-transform: uppercase; border-radius: 8px; border: 1px solid #8884; background: #8881; }
   .card { border: 1px solid #8883; border-radius: 10px; padding: 12px; margin-bottom: 12px; }
   .card h2 { font-size: 14px; margin: 0 0 8px; opacity: .8; font-weight: 600; }
-  .status { font-family: ui-monospace, Consolas, monospace; font-size: 13px; white-space: pre-wrap; background: #8881; border-radius: 8px; padding: 10px; min-height: 120px; max-height: 320px; overflow: auto; }
-  .ok { color: #16a34a; } .bad { color: #dc2626; } .warn { color: #d97706; }
+  .status { font-family: ui-monospace, Consolas, monospace; font-size: 12px; white-space: pre-wrap; background: #8881; border-radius: 8px; padding: 10px; min-height: 140px; max-height: 360px; overflow: auto; }
+  .ok { color: #16a34a; } .bad { color: #dc2626; } .warn { color: #d97706; } .dim { opacity: .65; }
   .hint { font-size: 12px; opacity: .7; margin-top: 6px; }
   .big { font-family: ui-monospace, Consolas, monospace; font-size: 34px; letter-spacing: 6px; font-weight: 700; }
   label.chk { display: flex; gap: 8px; align-items: center; font-size: 14px; }
   details { margin-top: 8px; font-size: 13px; }
-  textarea { width: 100%; height: 80px; font-family: ui-monospace, Consolas, monospace; font-size: 11px; padding: 6px; border-radius: 8px; border: 1px solid #8884; box-sizing: border-box; }
+  textarea { width: 100%; height: 78px; font-family: ui-monospace, Consolas, monospace; font-size: 11px; padding: 6px; border-radius: 8px; border: 1px solid #8884; box-sizing: border-box; }
+  .counters { font-family: ui-monospace, Consolas, monospace; font-size: 12px; margin-top: 8px; }
 </style>
 </head>
 <body>
-<h1>Проверка канала WebRTC</h1>
-<div class="sub">Обмен кодами — через публичный сервис ntfy.sh, но содержимое шифруется ключом из кода комнаты: сервис видит только шифротекст.</div>
+<h1>Диагностика канала WebRTC</h1>
+<div class="sub">Версия с принудительным выводом состояния: даже если события ICE не срабатывают, состояние печатается по таймеру.</div>
 
 <div class="card">
   <h2>1. Роль и режим</h2>
@@ -36,16 +37,14 @@
     <button id="btnPhone">Я телефон — подключиться</button>
   </div>
   <div class="row">
-    <label class="chk"><input type="checkbox" id="forceRelay"> Только через TURN (проверка релея)</label>
+    <label class="chk"><input type="checkbox" id="forceRelay"> Только через TURN</label>
+    <button id="btnDump">Показать диагностику</button>
   </div>
-  <div class="hint">Галочка должна совпадать на обеих сторонах.</div>
 </div>
 
 <div class="card" id="roomCard" style="display:none">
   <h2>2. Код комнаты</h2>
-  <div class="row">
-    <div id="roomCodeShow" class="big">—</div>
-  </div>
+  <div class="row"><div id="roomCodeShow" class="big">—</div></div>
   <div class="row" id="phoneJoinRow" style="display:none">
     <input id="roomInput" class="code" placeholder="XXXXXXXX" maxlength="8" autocapitalize="characters" autocomplete="off">
     <button id="btnJoin" class="primary">Подключиться</button>
@@ -53,13 +52,13 @@
   <div class="hint" id="roomHint"></div>
 </div>
 
-<details>
-  <summary>Ручной режим (если сервис недоступен)</summary>
+<details open>
+  <summary>Ручной режим (без сторонних сервисов)</summary>
   <div style="margin-top:8px">
     <div class="row"><button id="btnManualPc">Как компьютер: создать предложение</button><button id="btnManualPhone">Как телефон: принять предложение</button></div>
     <div id="manualBox" style="display:none">
       <textarea id="manualIn" placeholder="вставьте сюда код с другой стороны"></textarea>
-      <div class="row"><button id="manualApply">Применить</button><button id="manualCopy">Скопировать результат</button></div>
+      <div class="row"><button id="manualApply" class="primary">Применить</button><button id="manualCopy">Скопировать результат</button></div>
       <textarea id="manualOut" readonly placeholder="здесь появится ваш код"></textarea>
     </div>
   </div>
@@ -67,22 +66,23 @@
 
 <div class="card">
   <h2>Состояние</h2>
+  <div class="counters" id="counters">кандидаты: —</div>
   <div id="status" class="status">ожидание</div>
 </div>
 
 <script>
 (() => {
   const st = document.getElementById('status');
+  const cnt = document.getElementById('counters');
+  const $ = (id) => document.getElementById(id);
   const log = (m, cls) => {
     const t = new Date().toLocaleTimeString('ru-RU');
     st.innerHTML += `\n<span class="${cls || ''}">[${t}] ${m}</span>`;
     st.scrollTop = st.scrollHeight;
   };
   const set = (m) => { st.textContent = m; };
-  const $ = (id) => document.getElementById(id);
 
-  const TURN_USER = 'openrelayproject';
-  const TURN_PASS = 'openrelayproject';
+  const TURN_USER = 'openrelayproject', TURN_PASS = 'openrelayproject';
   const ICE = [
     { urls: 'stun:stun.l.google.com:19302' },
     { urls: 'stun:stun.cloudflare.com:3478' },
@@ -92,11 +92,21 @@
     { urls: 'turns:openrelay.metered.ca:443?transport=tcp', username: TURN_USER, credential: TURN_PASS }
   ];
 
-  let pc = null, dc = null, pingTimer = null, pollTimer = null;
-  const candTypes = new Set();
+  let pc = null, dc = null, pingTimer = null, pollTimer = null, diagTimer = null;
+  const counts = { host: 0, srflx: 0, relay: 0, prflx: 0, other: 0 };
   const relayOnly = () => $('forceRelay').checked;
 
-  // --- шифрование сигнализации: ключ = SHA-256(код комнаты) ---
+  function renderCounts() {
+    cnt.textContent = `кандидаты: host=${counts.host} srflx=${counts.srflx} relay=${counts.relay} prflx=${counts.prflx} прочие=${counts.other}`;
+  }
+  function resetCounts() {
+    for (const k of Object.keys(counts)) counts[k] = 0;
+    renderCounts();
+  }
+
+  const countCandidates = (sdp) => (sdp.match(/^a=candidate:/gm) || []).length;
+
+  // ---------- шифрование сигнализации ----------
   const enc = new TextEncoder(), dec = new TextDecoder();
   async function keyFrom(code) {
     const d = await crypto.subtle.digest('SHA-256', enc.encode('dsh-poc|' + code));
@@ -120,13 +130,10 @@
     const pt = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: raw.slice(0, 12) }, key, raw.slice(12));
     return JSON.parse(dec.decode(pt));
   }
-
-  // --- транспорт сигнализации через ntfy.sh ---
   async function topicFor(code) { return 'dshpoc-' + await digestHex(code); }
   async function publish(code, obj) {
     const topic = await topicFor(code);
-    const body = await seal(code, obj);
-    const r = await fetch('https://ntfy.sh/' + topic, { method: 'POST', body });
+    const r = await fetch('https://ntfy.sh/' + topic, { method: 'POST', body: await seal(code, obj) });
     if (!r.ok) throw new Error('publish ' + r.status);
     log('код отправлен в комнату', 'ok');
   }
@@ -134,38 +141,52 @@
     const topic = await topicFor(code);
     const r = await fetch('https://ntfy.sh/' + topic + '/json?poll=1&since=all', { cache: 'no-store' });
     if (!r.ok) return [];
-    const text = await r.text();
     const out = [];
-    for (const line of text.split('\n')) {
+    for (const line of (await r.text()).split('\n')) {
       if (!line.trim()) continue;
       try {
         const d = JSON.parse(line);
-        if (d.event === 'message' && d.message) out.push({ id: d.id, at: d.time, payload: await unseal(code, d.message) });
-      } catch { /* чужие или нерасшифровываемые сообщения игнорируем */ }
+        if (d.event === 'message' && d.message) out.push({ payload: await unseal(code, d.message) });
+      } catch { }
     }
     return out;
   }
 
+  // ---------- соединение ----------
   function newPc() {
     const p = new RTCPeerConnection({ iceServers: ICE, iceTransportPolicy: relayOnly() ? 'relay' : 'all' });
-    log('режим: ' + (relayOnly() ? 'только TURN' : 'обычный (все кандидаты)'));
+    log('режим: ' + (relayOnly() ? 'только TURN' : 'обычный'), 'dim');
+    resetCounts();
     p.onicecandidate = (e) => {
+      if (!e.candidate) { log('сбор кандидатов завершён', 'dim'); return; }
       const c = e.candidate;
-      if (!c) { log('сбор кандидатов завершён'); return; }
-      const type = (c.candidate.match(/ typ (\w+)/) || [])[1] || '?';
+      const type = (c.candidate.match(/ typ (\w+)/) || [])[1] || 'other';
       const proto = (c.candidate.match(/ (udp|tcp) /) || [])[1] || '';
-      const k = type + proto;
-      if (!candTypes.has(k)) {
-        candTypes.add(k);
-        log(`кандидат: ${type}${proto ? ' (' + proto + ')' : ''}`, type === 'relay' ? 'ok' : '');
-      }
+      if (counts[type] !== undefined) counts[type]++; else counts.other++;
+      renderCounts();
+      log(`кандидат: ${type}${proto ? ' (' + proto + ')' : ''}`, type === 'relay' ? 'ok' : 'dim');
     };
-    p.oniceconnectionstatechange = () => log('ice: ' + p.iceConnectionState, p.iceConnectionState === 'connected' || p.iceConnectionState === 'completed' ? 'ok' : '');
+    p.onicecandidateerror = (e) => log(`ошибка ICE: ${e.errorCode || ''} ${e.errorText || ''} ${e.url || ''}`.trim(), 'bad');
+    p.oniceconnectionstatechange = () => log('ice: ' + p.iceConnectionState, /connected|completed/.test(p.iceConnectionState) ? 'ok' : (p.iceConnectionState === 'failed' ? 'bad' : ''));
+    p.onsignalingstatechange = () => log('сигнализация: ' + p.signalingState, 'dim');
     p.onconnectionstatechange = () => {
       log('соединение: ' + p.connectionState, p.connectionState === 'connected' ? 'ok' : (p.connectionState === 'failed' ? 'bad' : ''));
       if (p.connectionState === 'connected') showStats(p);
     };
     return p;
+  }
+
+  function startDiag(p) {
+    clearInterval(diagTimer);
+    diagTimer = setInterval(async () => {
+      if (!p) return;
+      let pairs = 0, succeeded = 0;
+      try {
+        const stats = await p.getStats();
+        stats.forEach((s) => { if (s.type === 'candidate-pair') { pairs++; if (s.state === 'succeeded') succeeded++; } });
+      } catch { }
+      log(`диагностика: сигнализация=${p.signalingState} ice=${p.iceConnectionState} соединение=${p.connectionState} пар=${pairs} успешных=${succeeded}`, 'dim');
+    }, 5000);
   }
 
   async function waitIce(p) {
@@ -190,7 +211,7 @@
         const m = JSON.parse(e.data);
         if (m.type === 'ping') { dc.send(JSON.stringify({ type: 'pong', t: m.t })); return; }
         if (m.type === 'pong') { log(`пинг ${Date.now() - m.t} мс`, 'ok'); return; }
-      } catch { log('сообщение: ' + String(e.data).slice(0, 60)); }
+      } catch { }
     };
     dc.onclose = () => { log('канал закрыт', 'bad'); clearInterval(pingTimer); };
   }
@@ -200,36 +221,46 @@
       const stats = await p.getStats();
       let pair = null, local = null, remote = null;
       stats.forEach((s) => { if (s.type === 'candidate-pair' && s.state === 'succeeded') pair = s; });
-      if (!pair) { log('пара кандидатов ещё не выбрана', 'warn'); return; }
+      if (!pair) { log('успешной пары пока нет', 'warn'); return; }
       stats.forEach((s) => {
         if (s.id === pair.localCandidateId) local = s;
         if (s.id === pair.remoteCandidateId) remote = s;
       });
-      const l = local ? local.candidateType : '?';
-      const r = remote ? remote.candidateType : '?';
+      const l = local ? local.candidateType : '?', r = remote ? remote.candidateType : '?';
       log(`путь: локальный ${l} → удалённый ${r}`, (l === 'relay' || r === 'relay') ? 'warn' : 'ok');
       if (l !== 'relay' && r !== 'relay') log('ПРЯМОЕ соединение — релей не нужен', 'ok');
-      else log('соединение через TURN-релей (шифрование сквозное)', 'warn');
     } catch (e) { log('статистика недоступна: ' + e.message, 'warn'); }
   }
 
-  // --- компьютер: комната ---
+  async function dumpDiag() {
+    if (!pc) { log('соединение ещё не создано', 'warn'); return; }
+    log('--- ручная диагностика ---', 'dim');
+    log(`signalingState=${pc.signalingState} iceGathering=${pc.iceGatheringState} iceConnection=${pc.iceConnectionState} connection=${pc.connectionState}`, 'dim');
+    const ld = pc.localDescription, rd = pc.remoteDescription;
+    log(`локальный SDP: ${ld ? countCandidates(ld.sdp) + ' кандидатов' : 'нет'}`, 'dim');
+    log(`удалённый SDP: ${rd ? countCandidates(rd.sdp) + ' кандидатов' : 'нет'}`, 'dim');
+    renderCounts();
+  }
+
+  // ---------- комнаты ----------
   async function startPcRoom() {
-    const code = Array.from(crypto.getRandomValues(new Uint8Array(6)), b => 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'[b % 32]).join('').slice(0, 8);
+    const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    const bytes = crypto.getRandomValues(new Uint8Array(8));
+    const code = Array.from(bytes, b => alphabet[b % alphabet.length]).join('');
     $('roomCard').style.display = '';
     $('roomCodeShow').textContent = code;
     $('phoneJoinRow').style.display = 'none';
-    $('roomHint').textContent = 'Введите этот код на телефоне. Обмен произойдёт автоматически.';
-    document.body.dataset.code = code;
-    log('комната ' + code + ' создана');
-    candTypes.clear();
+    $('roomHint').textContent = 'Введите этот код на телефоне.';
+    log('комната ' + code + ' создана', 'ok');
     pc = newPc();
+    startDiag(pc);
     wireChannel(pc.createDataChannel('poc', { ordered: true }));
     const offer = await pc.createOffer();
     await pc.setLocalDescription(offer);
+    log(`предложение: ${countCandidates(pc.localDescription.sdp)} кандидатов`, 'dim');
     await waitIce(pc);
-    const payload = { role: 'offer', sdp: pc.localDescription.sdp, relay: relayOnly() };
-    try { await publish(code, payload); } catch (e) { log('не удалось отправить код: ' + e.message, 'bad'); }
+    try { await publish(code, { role: 'offer', sdp: pc.localDescription.sdp }); }
+    catch (e) { log('не удалось отправить код: ' + e.message, 'bad'); }
     log('ждём ответ телефона…');
     clearInterval(pollTimer);
     pollTimer = setInterval(async () => {
@@ -239,74 +270,92 @@
         const ans = [...msgs].reverse().find(m => m.payload && m.payload.role === 'answer');
         if (ans && pc.signalingState === 'have-local-offer') {
           await pc.setRemoteDescription({ type: 'answer', sdp: ans.payload.sdp });
-          log('ответ получен автоматически, ждём соединения…', 'ok');
+          log('ответ получен, кандидатов в нём: ' + countCandidates(ans.payload.sdp), 'ok');
           clearInterval(pollTimer);
         }
-      } catch (e) { /* тихо, повторим */ }
+      } catch { }
     }, 2000);
   }
 
-  // --- телефон: вход в комнату ---
   async function joinRoom() {
     const code = ($('roomInput').value || '').trim().toUpperCase();
     if (code.length < 6) { log('введите код комнаты', 'bad'); return; }
     $('roomCard').style.display = '';
     $('roomCodeShow').textContent = code;
     log('ищу предложение в комнате ' + code + '…');
-    candTypes.clear();
     pc = newPc();
+    startDiag(pc);
     pc.ondatachannel = (e) => wireChannel(e.channel);
     let offer = null;
-    for (let i = 0; i < 20 && !offer; i++) {
+    for (let i = 0; i < 15 && !offer; i++) {
       try {
         const msgs = await readRoom(code);
         offer = [...msgs].reverse().find(m => m.payload && m.payload.role === 'offer');
-      } catch (e) { /* повторим */ }
+      } catch { }
       if (!offer) await new Promise(r => setTimeout(r, 1500));
     }
-    if (!offer) { log('предложение не найдено — проверьте код и нажмите «создать комнату» заново', 'bad'); return; }
+    if (!offer) { log('предложение не найдено (сервис недоступен)', 'bad'); return; }
     await pc.setRemoteDescription({ type: 'offer', sdp: offer.payload.sdp });
     const answer = await pc.createAnswer();
     await pc.setLocalDescription(answer);
+    log(`ответ: ${countCandidates(pc.localDescription.sdp)} кандидатов`, 'dim');
     await waitIce(pc);
-    try {
-      await publish(code, { role: 'answer', sdp: pc.localDescription.sdp });
-      log('ответ отправлен, ждём соединения…', 'ok');
-    } catch (e) { log('не удалось отправить ответ: ' + e.message, 'bad'); }
+    try { await publish(code, { role: 'answer', sdp: pc.localDescription.sdp }); log('ответ отправлен, ждём соединения…', 'ok'); }
+    catch (e) { log('не удалось отправить ответ: ' + e.message, 'bad'); }
   }
 
-  // --- ручной режим (резерв) ---
+  // ---------- ручной режим ----------
   let manualRole = null;
+  const b64 = (s) => btoa(unescape(encodeURIComponent(s)));
+  const unb64 = (s) => decodeURIComponent(escape(atob(s.trim())));
+
   async function manualStart(role) {
     manualRole = role;
     $('manualBox').style.display = '';
-    candTypes.clear();
     pc = newPc();
+    startDiag(pc);
     if (role === 'pc') {
       wireChannel(pc.createDataChannel('poc', { ordered: true }));
       const offer = await pc.createOffer();
       await pc.setLocalDescription(offer);
+      log(`предложение: ${countCandidates(pc.localDescription.sdp)} кандидатов`, 'dim');
       await waitIce(pc);
-      $('manualOut').value = btoa(unescape(encodeURIComponent(pc.localDescription.sdp)));
-      $('manualOut').placeholder = 'отправьте этот код другой стороне';
+      $('manualOut').value = b64(pc.localDescription.sdp);
+      log(`готово, кандидатов в коде: ${countCandidates(pc.localDescription.sdp)}`, 'ok');
     } else {
       pc.ondatachannel = (e) => wireChannel(e.channel);
       const raw = $('manualIn').value.trim();
-      if (!raw) { log('вставьте код предложения', 'bad'); return; }
-      await pc.setRemoteDescription({ type: 'offer', sdp: decodeURIComponent(escape(atob(raw))) });
+      if (!raw) { log('вставьте код предложения в верхнее поле', 'bad'); return; }
+      const sdp = unb64(raw);
+      log('получено предложение, кандидатов в нём: ' + countCandidates(sdp), 'dim');
+      await pc.setRemoteDescription({ type: 'offer', sdp });
       const answer = await pc.createAnswer();
       await pc.setLocalDescription(answer);
       await waitIce(pc);
-      $('manualOut').value = btoa(unescape(encodeURIComponent(pc.localDescription.sdp)));
+      $('manualOut').value = b64(pc.localDescription.sdp);
+      log(`ответ готов, кандидатов: ${countCandidates(pc.localDescription.sdp)}`, 'ok');
     }
   }
+
   async function manualApply() {
     const raw = $('manualIn').value.trim();
-    if (!raw) { log('вставьте код', 'bad'); return; }
-    const sdp = decodeURIComponent(escape(atob(raw)));
-    if (manualRole === 'pc') await pc.setRemoteDescription({ type: 'answer', sdp });
-    else { await pc.setRemoteDescription({ type: 'offer', sdp }); const a = await pc.createAnswer(); await pc.setLocalDescription(a); await waitIce(pc); $('manualOut').value = btoa(unescape(encodeURIComponent(pc.localDescription.sdp))); }
-    log('код применён, ждём соединения…');
+    if (!raw) { log('вставьте код в верхнее поле', 'bad'); return; }
+    if (!pc) { log('сначала нажмите кнопку роли выше', 'bad'); return; }
+    const sdp = unb64(raw);
+    const n = countCandidates(sdp);
+    if (manualRole === 'pc') {
+      if (pc.signalingState !== 'have-local-offer') { log('состояние не подходит для ответа: ' + pc.signalingState, 'bad'); return; }
+      await pc.setRemoteDescription({ type: 'answer', sdp });
+      log(`ответ применён (кандидатов: ${n}), ждём соединения…`, 'ok');
+    } else {
+      await pc.setRemoteDescription({ type: 'offer', sdp });
+      const answer = await pc.createAnswer();
+      await pc.setLocalDescription(answer);
+      await waitIce(pc);
+      $('manualOut').value = b64(pc.localDescription.sdp);
+      log(`ответ готов (кандидатов: ${n}), скопируйте его`, 'ok');
+    }
+    log(`состояние после применения: signaling=${pc.signalingState} ice=${pc.iceConnectionState}`, 'dim');
   }
 
   $('btnPc').onclick = () => { $('phoneJoinRow').style.display = 'none'; startPcRoom(); };
@@ -320,6 +369,7 @@
     try { await navigator.clipboard.writeText(el.value); log('скопировано', 'ok'); }
     catch { el.select(); document.execCommand('copy'); }
   };
+  $('btnDump').onclick = () => dumpDiag();
 })();
 </script>
 </body>
