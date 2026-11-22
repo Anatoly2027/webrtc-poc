@@ -67,6 +67,11 @@
 <div class="card">
   <h2>Состояние</h2>
   <div class="counters" id="counters">кандидаты: —</div>
+  <div class="row" style="margin-top:8px">
+    <button id="btnCopyLog" class="primary">Скопировать состояние</button>
+    <button id="btnPause">Пауза</button>
+    <button id="btnClear">Очистить</button>
+  </div>
   <div id="status" class="status">ожидание</div>
 </div>
 
@@ -75,12 +80,18 @@
   const st = document.getElementById('status');
   const cnt = document.getElementById('counters');
   const $ = (id) => document.getElementById(id);
+  const logLines = [];
+  let paused = false;
   const log = (m, cls) => {
     const t = new Date().toLocaleTimeString('ru-RU');
-    st.innerHTML += `\n<span class="${cls || ''}">[${t}] ${m}</span>`;
+    const line = `[${t}] ${m}`;
+    if (paused) return;
+    logLines.push(line);
+    if (logLines.length > 400) logLines.shift();
+    st.textContent = logLines.join('\n');
     st.scrollTop = st.scrollHeight;
   };
-  const set = (m) => { st.textContent = m; };
+  const set = (m) => { if (!paused) { logLines.length = 0; logLines.push(m); st.textContent = m; } };
 
   const TURN_USER = 'openrelayproject', TURN_PASS = 'openrelayproject';
   const ICE = [
@@ -393,6 +404,28 @@
     catch { el.select(); document.execCommand('copy'); }
   };
   $('btnDump').onclick = () => dumpDiag();
+  $('btnCopyLog').onclick = async () => {
+    const text = logLines.length ? logLines.join('\n') : st.textContent;
+    try {
+      await navigator.clipboard.writeText(text);
+      st.textContent += '\n--- состояние скопировано в буфер ---';
+    } catch {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand('copy'); } catch { }
+      document.body.removeChild(ta);
+      st.textContent += '\n--- скопировано (резервный способ) ---';
+    }
+    st.scrollTop = st.scrollHeight;
+  };
+  $('btnPause').onclick = () => {
+    paused = !paused;
+    $('btnPause').textContent = paused ? 'Продолжить' : 'Пауза';
+    if (!paused) { st.textContent = logLines.join('\n') + '\n--- продолжено ---'; st.scrollTop = st.scrollHeight; }
+  };
+  $('btnClear').onclick = () => { logLines.length = 0; st.textContent = 'очищено'; };
 })();
 </script>
 </body>
